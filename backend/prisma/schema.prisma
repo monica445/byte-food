@@ -1,7 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +6,271 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ─── ENUMS ──────────────────────────────────────────
+
+enum UserRole {
+  CUSTOMER
+  SELLER
+}
+
+enum AppLanguage {
+  EN
+  KM
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  PREPARING
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  COD
+  PAYWAY
+}
+
+enum PaymentProvider {
+  ABA_PAYWAY
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+// ─── USER ───────────────────────────────────────────
+
+model User {
+  id                String      @id @default(cuid())
+  name              String
+  email             String      @unique
+  passwordHash      String
+  phone             String?     @unique
+  role              UserRole    @default(CUSTOMER)
+  preferredLanguage AppLanguage @default(EN)
+
+  shop      Shop?
+  addresses Address[]
+  orders    Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+}
+
+// ─── SHOP CATEGORY ─────────────────────────────────
+
+model ShopCategory {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  imageUrl    String?
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  shops Shop[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+// ─── SHOP ──────────────────────────────────────────
+
+model Shop {
+  id             String  @id @default(cuid())
+  sellerId       String  @unique
+  shopCategoryId String
+
+  name        String
+  description String?
+  logoUrl     String?
+  coverUrl    String?
+  address     String
+  latitude    Float?
+  longitude   Float?
+
+  isOpen     Boolean @default(false)
+  isApproved Boolean @default(false)
+
+  seller       User         @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  shopCategory ShopCategory @relation(fields: [shopCategoryId], references: [id], onDelete: Restrict)
+
+  productCategories ProductCategory[]
+  products          Product[]
+  orders            Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shopCategoryId, isApproved, isOpen])
+  @@index([name])
+}
+
+// ─── PRODUCT CATEGORY ──────────────────────────────
+
+model ProductCategory {
+  id        String @id @default(cuid())
+  shopId    String
+  name      String
+  sortOrder Int    @default(0)
+
+  shop     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shopId, name])
+  @@index([shopId, sortOrder])
+}
+
+// ─── PRODUCT ───────────────────────────────────────
+
+model Product {
+  id         String  @id @default(cuid())
+  shopId     String
+  categoryId String?
+
+  name        String
+  description String?
+  price       Int
+  imageUrl    String?
+  isAvailable Boolean @default(true)
+
+  shop     Shop             @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  category ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shopId, isAvailable])
+  @@index([categoryId])
+  @@index([name])
+}
+
+// ─── CUSTOMER ADDRESS ──────────────────────────────
+
+model Address {
+  id     String @id @default(cuid())
+  userId String
+
+  label         String
+  recipientName String
+  phone         String
+  addressLine   String
+  latitude      Float?
+  longitude     Float?
+  isDefault     Boolean @default(false)
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isDefault])
+}
+
+// ─── ORDER ─────────────────────────────────────────
+
+model Order {
+  id         String      @id @default(cuid())
+  customerId String
+  shopId     String
+  addressId  String?
+
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod
+
+  // Store the delivery details at checkout.
+  // Later address edits must not change an existing order.
+  deliveryRecipientName  String
+  deliveryRecipientPhone String
+  deliveryAddressLine    String
+  deliveryLatitude       Float?
+  deliveryLongitude      Float?
+
+  // All monetary values are integer KHR amounts.
+  subtotal    Int
+  deliveryFee Int     @default(0)
+  total       Int
+
+  acceptedAt  DateTime?
+  deliveredAt DateTime?
+
+  customer User     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  shop     Shop     @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  address  Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+
+  items    OrderItem[]
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId, createdAt])
+  @@index([shopId, status, createdAt])
+  @@index([status, createdAt])
+}
+
+// ─── ORDER ITEM ────────────────────────────────────
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  productId String?
+
+  // Historical snapshots: retain what was purchased.
+  productName String
+  unitPrice   Int
+  quantity    Int
+  lineTotal   Int
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// ─── PAYMENT ───────────────────────────────────────
+
+model Payment {
+  id      String @id @default(cuid())
+  orderId String
+
+  provider PaymentProvider @default(ABA_PAYWAY)
+  status   PaymentStatus   @default(PENDING)
+  amount   Int
+
+  // IDs returned by the payment provider.
+  providerTransactionId String? @unique
+  providerReference     String?
+
+  paidAt DateTime?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId, createdAt])
+  @@index([status])
 }
