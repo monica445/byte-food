@@ -1,4 +1,4 @@
-import 'package:customer_app/utils/async_state.dart';
+import 'package:customer_app/core/state/async_state.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/auth_user.dart';

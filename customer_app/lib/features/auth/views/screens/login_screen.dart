@@ -1,6 +1,8 @@
 import 'package:customer_app/features/auth/viewmodels/auth_view_model.dart';
+import 'package:customer_app/l10n/app_localizations.dart';
 import 'package:customer_app/features/auth/views/screens/register_screen.dart';
 import 'package:customer_app/features/auth/views/widgets/app_button.dart';
+import 'package:customer_app/widgets/language_switcher.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -20,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _password = TextEditingController();
 
   bool _hidePassword = true;
+  bool _showValidationErrors = false;
 
   @override
   void dispose() {
@@ -43,6 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
 
+    setState(() => _showValidationErrors = true);
     if (!_formKey.currentState!.validate()) return;
 
     final auth = context.read<AuthViewModel>();
@@ -65,6 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthViewModel>();
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: SafeArea(
@@ -76,6 +81,11 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Align(
+                    alignment: Alignment.centerRight,
+                    child: LanguageSwitcher(),
+                  ),
+                  const SizedBox(height: 12),
                   Image.asset(
                     'assets/images/logo.png',
                     height: 90,
@@ -87,23 +97,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Welcome back!',
+                    l10n.welcomeBack,
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'Sign in to order your favourite food.',
-                    style: theme.textTheme.bodyMedium,
-                  ),
+                  Text(l10n.loginSubtitle, style: theme.textTheme.bodyMedium),
                   const SizedBox(height: 28),
                   AppAuthForm(
+                    autovalidateMode: _showValidationErrors
+                        ? AutovalidateMode.onUserInteraction
+                        : AutovalidateMode.disabled,
                     formKey: _formKey,
                     children: [
                       AppTextField(
                         controller: _email,
-                        label: 'Email',
+                        label: l10n.email,
                         prefixIcon: Icons.email_outlined,
                         keyboardType: TextInputType.emailAddress,
                         validator: _validateEmail,
@@ -111,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       AppTextField(
                         controller: _password,
-                        label: 'Password',
+                        label: l10n.password,
                         prefixIcon: Icons.lock_outline,
                         obscureText: _hidePassword,
                         textInputAction: TextInputAction.done,
@@ -126,12 +136,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         validator: (value) => value == null || value.isEmpty
-                            ? 'Password is required.'
+                            ? l10n.enterPassword
                             : null,
                       ),
                       const SizedBox(height: 22),
                       AppButton(
-                        label: 'Sign in',
+                        label: l10n.login,
                         isLoading: auth.isLoading,
                         onPressed: _submit,
                       ),
@@ -141,7 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Don't have an account?"),
+                      Text(l10n.noAccount),
                       TextButton(
                         onPressed: auth.isLoading
                             ? null
@@ -152,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 );
                               },
-                        child: const Text('Create account'),
+                        child: Text(l10n.registerHere),
                       ),
                     ],
                   ),
