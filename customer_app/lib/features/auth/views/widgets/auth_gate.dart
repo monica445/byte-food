@@ -11,15 +11,10 @@ class AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthViewModel>();
 
-    switch (auth.status) {
-      case AuthStatus.checking:
-        return const Scaffold(body: Center(child: CircularProgressIndicator()));
-
-      case AuthStatus.unauthenticated:
-        return const LoginScreen();
-
-      case AuthStatus.authenticated:
-        return const HomeScreen();
+    if (auth.isAuthenticated) {
+      return const HomeScreen();
     }
+
+    return const LoginScreen();
   }
 }

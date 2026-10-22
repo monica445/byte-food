@@ -1,52 +1,33 @@
-import 'package:dio/dio.dart';
+import 'package:customer_app/utils/async_state.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../../core/network/api_client.dart';
-import '../services/auth_service.dart';
 import '../models/auth_user.dart';
-
-enum AuthStatus { checking, unauthenticated, authenticated }
+import '../services/auth_service.dart';
 
 class AuthViewModel extends ChangeNotifier {
-  final AuthService _service;
-  final ApiClient _client;
+  AuthViewModel(this._authService);
 
-  AuthViewModel(this._service, this._client);
+  final AuthService _authService;
 
-  AuthStatus _status = AuthStatus.checking;
-  AuthUser? _user;
-  bool _isLoading = false;
-  String? _errorMessage;
+  AsyncState<AuthUser> _state = const AsyncState.idle();
 
-  AuthStatus get status => _status;
-  AuthUser? get user => _user;
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
-
-  Future<void> restoreSession() async {
-    try {
-      final token = await _client.readToken();
-
-      if (token == null || token.isEmpty) {
-        _status = AuthStatus.unauthenticated;
-      } else {
-        // Validate the saved token through the backend.
-        _user = await _service.getCurrentUser();
-        _status = AuthStatus.authenticated;
-      }
-    } catch (_) {
-      await _client.clearToken();
-      _user = null;
-      _status = AuthStatus.unauthenticated;
-    }
-
-    notifyListeners();
-  }
+  AuthUser? get user => _state.data;
+  bool get isAuthenticated => _state.hasData;
+  bool get isLoading => _state.isLoading;
+  String? get errorMessage => _state.error;
 
   Future<bool> login({required String email, required String password}) async {
-    return _authenticate(
-      () => _service.login(email: email, password: password),
-    );
+    _setState(const AsyncState.loading());
+
+    try {
+      final result = await _authService.login(email: email, password: password);
+
+      _setState(AsyncState.success(result.user));
+      return true;
+    } catch (error) {
+      _setState(AsyncState.failure(_getErrorMessage(error)));
+      return false;
+    }
   }
 
   Future<bool> register({
@@ -54,71 +35,39 @@ class AuthViewModel extends ChangeNotifier {
     required String email,
     required String password,
   }) async {
-    return _authenticate(
-      () => _service.register(name: name, email: email, password: password),
-    );
-  }
-
-  Future<bool> _authenticate(Future<AuthResult> Function() request) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+    _setState(const AsyncState.loading());
 
     try {
-      final result = await request();
+      final result = await _authService.register(
+        name: name,
+        email: email,
+        password: password,
+      );
 
-      // Save token before changing the app to authenticated state.
-      await _client.saveToken(result.token);
-
-      _user = result.user;
-      _status = AuthStatus.authenticated;
+      _setState(AsyncState.success(result.user));
       return true;
     } catch (error) {
-      _errorMessage = _friendlyError(error);
+      _setState(AsyncState.failure(_getErrorMessage(error)));
       return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
   }
 
-  Future<void> logout() async {
-    await _client.clearToken();
-
-    _user = null;
-    _status = AuthStatus.unauthenticated;
-    _errorMessage = null;
-
-    notifyListeners();
+  void clearError() {
+    if (_state.hasError) {
+      _setState(const AsyncState.idle());
+    }
   }
 
-  String _friendlyError(Object error) {
-    if (error is DioException) {
-      final response = error.response;
-      final body = response?.data;
-
-      if (body is Map && body['message'] is String) {
-        return body['message'] as String;
-      }
-
-      if (response?.statusCode == 401) {
-        return 'Email or password is incorrect.';
-      }
-
-      if (response?.statusCode == 409) {
-        return 'An account with this email already exists.';
-      }
-
-      if (error.type == DioExceptionType.connectionTimeout ||
-          error.type == DioExceptionType.connectionError) {
-        return 'Cannot connect to ByteMe. Please try again.';
-      }
-    }
-
+  String _getErrorMessage(Object error) {
     if (error is FormatException) {
       return error.message;
     }
 
     return 'Something went wrong. Please try again.';
+  }
+
+  void _setState(AsyncState<AuthUser> state) {
+    _state = state;
+    notifyListeners();
   }
 }

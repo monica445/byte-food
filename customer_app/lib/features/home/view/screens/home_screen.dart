@@ -12,18 +12,7 @@ class HomeScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ByteFood'),
-        actions: [
-          IconButton(
-            tooltip: 'Sign out',
-            onPressed: () {
-              context.read<AuthViewModel>().logout();
-            },
-            icon: const Icon(Icons.logout_rounded),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('ByteFood')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

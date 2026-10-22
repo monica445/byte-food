@@ -16,10 +16,7 @@ void main() {
       providers: [
         Provider<ApiClient>.value(value: apiClient),
         Provider<AuthService>.value(value: authService),
-        ChangeNotifierProvider(
-          create: (_) =>
-              AuthViewModel(authService, apiClient)..restoreSession(),
-        ),
+        ChangeNotifierProvider(create: (_) => AuthViewModel(authService)),
       ],
       child: const ByteFoodApp(),
     ),
