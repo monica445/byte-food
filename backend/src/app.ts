@@ -3,6 +3,8 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import authRoutes from "../src/modules/auth/auth.routes.js";
+import shopRoutes from "./modules/shops/shop.routes.js";
+import shopCategoryRoutes from "./modules/shops/shop-categories/shop-category.routes.js";
 
 const app = express();
 
@@ -19,5 +21,6 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
-
+app.use("/api/shops", shopRoutes);
+app.use("/api/shop-categories", shopCategoryRoutes);
 export default app;
