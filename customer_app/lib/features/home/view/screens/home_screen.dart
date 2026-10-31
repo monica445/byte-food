@@ -4,6 +4,7 @@ import 'package:customer_app/core/constants/app_colors.dart';
 import 'package:customer_app/features/auth/viewmodels/auth_view_model.dart';
 import 'package:customer_app/features/home/view/widgets/async_state_view.dart';
 import 'package:customer_app/features/shop/models/shop_model.dart';
+import 'package:customer_app/features/shop/view/screens/shop_detail_screen.dart';
 import 'package:customer_app/features/shop/view/widgets/product_card.dart';
 import 'package:customer_app/features/shop/view/widgets/shop_card.dart';
 import 'package:customer_app/features/shop/view/widgets/shop_category_card.dart';
@@ -230,7 +231,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     'No shops found. Try a different search or category.',
                   );
                 }
-                // Open shops first (keeps server order within each group).
                 final ordered = [
                   ...shops.where((s) => s.isOpen),
                   ...shops.where((s) => !s.isOpen),
@@ -243,7 +243,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (i > 0) const SizedBox(height: 16),
                         ShopCard(
                           shop: ordered[i],
-                          onTap: () => widget.onShopTap?.call(ordered[i]),
+                          onTap: () {
+                            widget.onShopTap?.call(ordered[i]);
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ShopDetailScreen(
+                                  shopId: ordered[i].id,
+                                  initialShop: ordered[i],
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ],
