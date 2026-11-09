@@ -1,10 +1,11 @@
 import 'package:customer_app/features/home/view/widgets/async_state_view.dart';
+import 'package:customer_app/features/products/views/screens/product_detail_screen.dart';
+import 'package:customer_app/features/products/views/widgets/product_section.dart';
 import 'package:customer_app/features/shop/models/product_category_model.dart';
 import 'package:customer_app/features/shop/models/product_model.dart';
 import 'package:customer_app/features/shop/models/shop_model.dart';
-import 'package:customer_app/features/shop/view/widgets/category_chips.dart';
-import 'package:customer_app/features/shop/view/widgets/empty_products.dart';
-import 'package:customer_app/features/shop/view/widgets/product_category_section.dart';
+import 'package:customer_app/features/products/views/widgets/category_chips.dart';
+import 'package:customer_app/features/products/views/widgets/empty_products.dart';
 import 'package:customer_app/features/shop/view/widgets/shop_cover_app_bar.dart';
 import 'package:customer_app/features/shop/view/widgets/shop_header.dart';
 import 'package:customer_app/features/shop/view_models/shop_viewmodel.dart';
@@ -129,10 +130,21 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                 sliver: SliverList.separated(
                   itemCount: visibleCategories.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 24),
-                  itemBuilder: (_, index) {
-                    return ProductCategorySection(
-                      category: visibleCategories[index],
-                      onProductTap: widget.onProductTap,
+                  itemBuilder: (_, i) {
+                    final category = visibleCategories[i];
+                    return ProductSection(
+                      title: category.name,
+                      showCount: true,
+                      products: category.products,
+                      emptyMessage: 'No products in this category yet.',
+                      onProductTap: widget.onProductTap ??
+                          ((product) => ProductDetailScreen.open(
+                                context,
+                                productId: product.id,
+                                initialProduct: product,
+                                shop: shop,
+                              )),
+                      // No ordering from a closed shop.
                       onProductAdd: shop.isOpen ? widget.onProductAdd : null,
                     );
                   },
